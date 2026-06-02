@@ -1,0 +1,64 @@
+#pragma kernel CSMain
+
+struct GrassData {
+    float3 Position;
+    float Yaw;
+    float Scale;
+};
+
+StructuredBuffer<GrassData> _InputBuffer;
+AppendStructuredBuffer<GrassData> _OutputBufferLOD0;
+AppendStructuredBuffer<GrassData> _OutputBufferLOD1;
+AppendStructuredBuffer<GrassData> _OutputBufferLOD2;
+AppendStructuredBuffer<GrassData> _OutputBufferLOD3;
+
+float4 _FrustumPlanes[6];
+float3 _CameraPosition;
+float _LOD0Distance;
+float _LOD1Distance;
+float _LOD2Distance;
+float _MaxDistance;
+uint _InstanceCount;
+
+// Frustum Culling Logic
+// Checks if a point is within the 6 planes of the camera frustum
+bool IsInFrustum(float3 pos, float scale) {
+    for(int i = 0; i < 6; i++) {
+        // Dot product measures point distance from plane. 
+        // We use a small offset (-0.5f) to prevent grass at the screen edge from popping out too early.
+        if (dot(_FrustumPlanes[i].xyz, pos) + _FrustumPlanes[i].w < -scale) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID) {
+    if (id.x >= _InstanceCount) return;
+
+    GrassData data = _InputBuffer[id.x];
+    float3 worldPos = data.Position;
+
+    float3 diff = worldPos - _CameraPosition;
+    float distSq = dot(diff,diff);
+
+    if(distSq > (_MaxDistance * _MaxDistance)) return;
+
+    // 2. Frustum Culling (Only process if it's within range)
+    if (!IsInFrustum(worldPos, data.Scale)) return;
+
+    // 3. LOD Sorting & Appending
+    if (distSq < (_LOD0Distance * _LOD0Distance)) {
+    _OutputBufferLOD0.Append(data);
+    }
+    else if(distSq < (_LOD1Distance * _LOD1Distance)) {
+    _OutputBufferLOD1.Append(data);
+    }
+    else if(distSq < (_LOD2Distance * _LOD2Distance)) {
+    _OutputBufferLOD2.Append(data);
+    }
+    else {
+    _OutputBufferLOD3.Append(data);
+    }
+}

@@ -1,0 +1,58 @@
+#pragma kernel CSMain
+
+struct TreeData {
+    float3 Position;
+    float Yaw;
+    float Scale;
+};
+
+StructuredBuffer<TreeData> _InputBuffer;
+AppendStructuredBuffer<TreeData> _OutputBufferLOD0;
+AppendStructuredBuffer<TreeData> _OutputBufferLOD1;
+AppendStructuredBuffer<TreeData> _OutputBufferLOD2;
+
+float4 _FrustumPlanes[6];
+float3 _CameraPosition;
+float _LOD0Distance;
+float _LOD1Distance;
+float _MaxDistance;
+uint _InstanceCount;
+
+bool IsInFrustum(float3 pos, float radius) {
+    for(int i = 0; i < 6; i++) {
+        if (dot(_FrustumPlanes[i].xyz, pos) + _FrustumPlanes[i].w < -radius) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID) {
+    if (id.x >= _InstanceCount) return;
+
+    TreeData data = _InputBuffer[id.x];
+
+    float3 cullCenter = data.Position + float3(0, data.Scale * 5.0f, 0);
+
+    float cullRadius = data.Scale * 12.0f;
+
+    float3 worldPos = data.Position;
+    float3 diff = worldPos - _CameraPosition;
+
+    float distSq = dot(diff,diff);
+    if(distSq > (_MaxDistance * _MaxDistance)) return;
+
+    if(!IsInFrustum(cullCenter, cullRadius)){
+        return;
+    }
+
+    if (distSq < (_LOD0Distance * _LOD0Distance)) {
+        _OutputBufferLOD0.Append(data);
+    } else if(_LOD1Distance * _LOD1Distance) {
+        _OutputBufferLOD1.Append(data);
+    }
+    else{
+        _OutputBufferLOD2.Append(data);
+    }
+}
