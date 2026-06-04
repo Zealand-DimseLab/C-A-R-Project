@@ -65,10 +65,10 @@ public class WPVehicleController : MonoBehaviour {
     public int stopLookAheadWaypoints = 10;
 
     [Header("Vehicle Geometry (for pass distance)")]
-    [Tooltip("Optional: transform placed on the car's LEFT side (edge). Used to measure car half-width automatically.")]
-    public Transform leftSideReference;
+    [Tooltip("Optional: transform placed on the car's RIGHT side (edge). Used to measure car half-width automatically.")]
+    public Transform rightSideReference;
 
-    [Tooltip("Fallback half-width (meters) used if Left Side Reference is not set. Typical car ~0.85-1.0.")]
+    [Tooltip("Fallback half-width (meters) used if Right Side Reference is not set. Typical car ~0.85-1.0.")]
     public float fallbackHalfWidthMeters = 0.9f;
 
     [Header("Scenario Start")]
@@ -456,16 +456,16 @@ public class WPVehicleController : MonoBehaviour {
             ResetToStart();
     }
 
-    // ---------------- Optional: Pass distance (bike -> car LEFT side) ----------------
+    // ---------------- Optional: Pass distance (bike -> car RIGHT side) ----------------
 
     /// <summary>
     /// Adjusts WP0/WP1 laterally so the vehicle passes the bike at a desired distance measured
-    /// from the BIKE to the CAR'S LEFT SIDE (left edge), assuming the car passes on the left of the bike.
+    /// from the BIKE to the CAR'S RIGHT SIDE (right edge), assuming the car passes on the left of the bike.
     /// Keeps each waypoint's along-road placement (only moves sideways).
     /// </summary>
-    public void AdjustFirstTwoWaypointsForPassDistanceFromBikeToCarLeftSide(
+    public void AdjustFirstTwoWaypointsForPassDistanceFromBikeToCarRightSide(
         Transform bikeRoot,
-        float desiredBikeToCarLeftSideMeters
+        float desiredBikeToCarRightSideMeters
     ) {
         if (bikeRoot == null) { Debug.LogWarning($"{name}: bikeRoot is null"); return; }
         if (_path == null || _path.Length < 2) { Debug.LogWarning($"{name}: Path missing/too short."); return; }
@@ -483,20 +483,20 @@ public class WPVehicleController : MonoBehaviour {
         Vector3 right = Vector3.Cross(Vector3.up, fwd).normalized;
         Vector3 left = -right;
 
-        // Measure car center -> left edge distance (half-width)
+        // Measure car center -> right edge distance (half-width)
         float halfWidth = Mathf.Max(0.05f, fallbackHalfWidthMeters);
-        if (leftSideReference != null) {
+        if (rightSideReference != null) {
             Vector3 center = transform.position; center.y = 0f;
-            Vector3 refPos = leftSideReference.position; refPos.y = 0f;
+            Vector3 refPos = rightSideReference.position; refPos.y = 0f;
 
-            float signed = Vector3.Dot(refPos - center, right); // left edge should be negative
+            float signed = Vector3.Dot(refPos - center, right); // right edge should be negative
             float measured = Mathf.Abs(signed);
             if (measured >= 0.05f) halfWidth = measured;
         }
 
-        float desired = Mathf.Max(0f, desiredBikeToCarLeftSideMeters);
+        float desired = Mathf.Max(0f, desiredBikeToCarRightSideMeters);
 
-        // To achieve bike->carLeftEdge = desired, place car centerline further left by halfWidth
+        // To achieve bike->carRightEdge = desired, place car centerline further right by halfWidth
         float bikeToCenterline = desired + halfWidth;
 
         Vector3 bikePos = bikeRoot.position;
@@ -517,7 +517,7 @@ public class WPVehicleController : MonoBehaviour {
         }
 
         if (debugLogs)
-            Debug.Log($"{name}: Pass distance set. bike->carLeftEdge={desired:F2}m, halfWidth={halfWidth:F2}m, bike->centerline={bikeToCenterline:F2}m");
+            Debug.Log($"{name}: Pass distance set. bike->carRightEdge={desired:F2}m, halfWidth={halfWidth:F2}m, bike->centerline={bikeToCenterline:F2}m");
     }
 
     // ---------------- Helpers ----------------

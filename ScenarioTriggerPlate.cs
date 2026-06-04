@@ -68,7 +68,7 @@ public class ScenarioTriggerPlate : MonoBehaviour {
                 }
 
                 if (offsetFirstTwoWaypoints)
-                    v.AdjustFirstTwoWaypointsForPassDistanceFromBikeToCarLeftSide(bikeRoot, firstTwoWpLateralOffsetMeters);
+                    v.AdjustFirstTwoWaypointsForPassDistanceFromBikeToCarRightSide(bikeRoot, firstTwoWpLateralOffsetMeters);
 
                 v.TriggerStart();
 
